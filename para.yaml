@@ -1,0 +1,12 @@
+# +D 2024.4.26
+# Last modified time: 2024.7.28
+
+# Gaussian parameters
+SHDegreeInput: 2
+SHDegreeOutput: 0
+inputFilePrefix: "level_"
+delta: 0.001
+tmpChunkBin: "tmp.bin"
+octreeBin: "octree.bin"
+hierarchyBin: "hierarchy.bin"
+metadataFile: "metadata.json"
