@@ -47,12 +47,12 @@ def compute_view_matrix(camera_data):
     view_matrix[:3, :3] = rotation
     view_matrix[:3, 3] = position
 
-    view_matrix = np.linalg.inv(view_matrix)
-    return view_matrix
+    view_matrix = np.linalg.inv(view_matrix).tolist()
+    return np.array(view_matrix).flatten(order='F').tolist()
 
 # ------ main ------
 if len(sys.argv) != 3:
-    print("Usage: python ply2las.py <path> <scene_name>")
+    print("Usage: python ply2potree.py <path> <scene_name>")
     exit(0)      
 
 # set the iteration num with the newest one or parameter setting
@@ -63,7 +63,7 @@ target_dir = os.path.join(ply_dir, "iteration_" + str(saved_iters))
 
 cam_file = os.path.join(model_path, "cameras.json")
 # get the first viewMatrix
-with open('cameras.json', 'r') as file:
+with open(cam_file, 'r') as file:
     cameras_data = json.load(file)
 first_camera_data = cameras_data[0]
 view_matrix = compute_view_matrix(first_camera_data)
@@ -71,6 +71,7 @@ view_matrix = compute_view_matrix(first_camera_data)
 input_folder = [f for f in os.listdir(
         os.path.join(target_dir)) 
         if f.startswith(input_prefix) and f.endswith(".ply")]
+
 if len(input_folder) == 0:
     print("No gaussian output folder")
     exit(0)
@@ -78,13 +79,13 @@ input_folder.sort(key=lambda x: int(x.split('_')[1].split('.')[0]))
     # level_0.ply -> 0
 
 # if not exist backup folder, create it
-if not os.path.exists(os.path.join(sys.argv[1], "backup")):
-    os.makedirs(os.path.join(sys.argv[1], "backup"))
+if not os.path.exists(os.path.join(target_dir, "backup")):
+    os.makedirs(os.path.join(target_dir, "backup"))
 
 print("The input files are:")
-print('\n'.join(os.path.join(sys.argv[1], f) for f in input_folder))
+print('\n'.join(os.path.join(target_dir, f) for f in input_folder))
 
-BBox = get_global_bbox([os.path.join(sys.argv[1], f)
+BBox = get_global_bbox([os.path.join(target_dir, f)
                        for f in input_folder])
     # min_x, min_y, min_z, max_x, max_y, max_z
 
@@ -95,9 +96,9 @@ for f in input_folder:
     level = int(f.split('_')[1].split('.')[0])
 
     # set the input, backup, reference ply
-    input_ply = os.path.join(sys.argv[1], f)
+    input_ply = os.path.join(target_dir, f)
     # copy input_ply to backup folder
-    backup_ply = os.path.join(sys.argv[1], "backup", f)
+    backup_ply = os.path.join(target_dir, "backup", f)
     os.system("cp {} {}".format(input_ply, backup_ply)) # backup
 
     input_gaussian = GaussianModel(SH_degree)
@@ -112,7 +113,7 @@ for f in input_folder:
 potree = Potree(BBox, SH_degree_out, Gau_list, view_matrix)
 
 # save to potree
-output_folder = os.path.join(sys.argv[1], "potree")
+output_folder = os.path.join(model_path, sys.argv[2])
 if not os.path.exists(output_folder):
     os.makedirs(output_folder)
 
@@ -123,4 +124,4 @@ potree.output_octree(octree_bin)
 potree.output_hierarchy(hierarchy_bin)
 potree.output_metadata(metadata_json, sys.argv[2])
 
-print("The output files are:", octree_bin, hierarchy_bin, metadata_json)
+print("The output files are:\n", octree_bin, '\n', hierarchy_bin, '\n', metadata_json)
