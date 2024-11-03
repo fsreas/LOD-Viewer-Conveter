@@ -1,7 +1,7 @@
 # 2024.4.26 +D
 # Last modified time: 2024.7.28
 # Convert multi-level 3D LOD Gaussian output ply form to Potree form
-
+import json
 import numpy as np
 import os
 import sys
@@ -21,6 +21,7 @@ SH_degree = para["SHDegreeInput"]
 SH_degree_out = para["SHDegreeOutput"]
 d = para["delta"]
 
+# functions
 def get_global_bbox(ply_list: list):
     min_x, min_y, min_z = np.inf, np.inf, np.inf
     max_x, max_y, max_z = -np.inf, -np.inf, -np.inf
@@ -38,14 +39,37 @@ def get_global_bbox(ply_list: list):
         
     return [min_x, min_y, min_z, max_x + d, max_y + d, max_z + d]
 
+def compute_view_matrix(camera_data):
+    position = np.array(camera_data['position'])
+    rotation = np.array(camera_data['rotation'])
+
+    view_matrix = np.eye(4)
+    view_matrix[:3, :3] = rotation
+    view_matrix[:3, 3] = position
+
+    view_matrix = np.linalg.inv(view_matrix)
+    return view_matrix
+
 # ------ main ------
 if len(sys.argv) != 3:
     print("Usage: python ply2las.py <path> <scene_name>")
     exit(0)      
 
 # set the iteration num with the newest one or parameter setting
+model_path = os.path.join(sys.argv[1])
+ply_dir = os.path.join(model_path, "point_cloud")
+saved_iters = max([int(fname.split("_")[-1]) for fname in os.listdir(ply_dir)])
+target_dir = os.path.join(ply_dir, "iteration_" + str(saved_iters))
+
+cam_file = os.path.join(model_path, "cameras.json")
+# get the first viewMatrix
+with open('cameras.json', 'r') as file:
+    cameras_data = json.load(file)
+first_camera_data = cameras_data[0]
+view_matrix = compute_view_matrix(first_camera_data)
+
 input_folder = [f for f in os.listdir(
-        os.path.join(sys.argv[1])) 
+        os.path.join(target_dir)) 
         if f.startswith(input_prefix) and f.endswith(".ply")]
 if len(input_folder) == 0:
     print("No gaussian output folder")
@@ -85,7 +109,7 @@ for f in input_folder:
     Gau_list.append(result)
 
 # convert to potree structure
-potree = Potree(BBox, SH_degree_out, Gau_list)
+potree = Potree(BBox, SH_degree_out, Gau_list, view_matrix)
 
 # save to potree
 output_folder = os.path.join(sys.argv[1], "potree")

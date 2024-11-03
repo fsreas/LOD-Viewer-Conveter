@@ -223,9 +223,10 @@ class PotreeNode:
             
         
 class Potree:
-    def __init__(self, BBox, SH_degree, Gau_list):
+    def __init__(self, BBox, SH_degree, Gau_list, view_matrix):
         self.BBox = BBox # min_x, min_y, min_z, max_x, max_y, max_z
         self.SH_degree = SH_degree
+        self.view_matrix = view_matrix
               
         global chunk_dict, byte_dict
         for i in range(len(Gau_list)):
@@ -440,6 +441,7 @@ class Potree:
 	"version": "2.0",
 	"name": name,
 	"description": "",
+	"defaultViewMatrix": self.view_matrix,
 	"points": self.total_points_num,
 	"projection": "",
 	"hierarchy": {
